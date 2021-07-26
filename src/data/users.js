@@ -16,7 +16,7 @@ const users = [
   },
   {
     name: 'Tadeusz K',
-    average: '3.7',
+    average: '2.7',
   },
 ];
 
