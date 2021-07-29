@@ -1,34 +1,81 @@
-import React, { useState, useContext } from 'react';
+import React, { useContext, useEffect, useReducer, useRef } from 'react';
 import FormField from 'components/molecules/FormField/FormField';
 import Button from 'components/atoms/Button/Button';
 import ViewWrapper from 'components/molecules/ViewWrapper/ViewWrapper';
 import Title from 'components/atoms/Title/Title';
-import UsersContext from 'providers/UsersProvider';
+import { UsersContext } from 'providers/UsersProvider';
 
 const initialFormState = {
   name: '',
   attendance: '',
   average: '',
+  consent: false,
+  error: '',
+  checked: false,
+};
+
+const actionTypes = {
+  inputChange: 'INPUT_CHANGE',
+  clearValues: 'CLEAR_VALUES',
+  consentToggle: 'CONSENT_TOGGLE',
+  throwError: 'THROW_ERROR',
+};
+
+const reducer = (state, action) => {
+  switch (action.type) {
+    case actionTypes.inputChange:
+      return {
+        ...state,
+        [action.field]: action.value,
+      };
+    case actionTypes.clearValues:
+      return initialFormState;
+
+    case actionTypes.consentToggle:
+      return { ...state, consent: !state.consent, checked: true };
+    case actionTypes.throwError:
+      return { ...state, error: action.errorValue };
+    default:
+      return state;
+  }
 };
 
 const AddUser = () => {
-  const [formValues, setFormValues] = useState(initialFormState);
+  const [formValues, dispatch] = useReducer(reducer, initialFormState);
+
   const context = useContext(UsersContext);
 
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.focus();
+    }
+  }, []);
+
   const handleInputChange = (e) => {
-    setFormValues({ ...formValues, [e.target.name]: e.target.value });
+    dispatch({
+      type: 'INPUT_CHANGE',
+      field: e.target.name,
+      value: e.target.value,
+    });
   };
 
   const handleSubmitUser = (e) => {
     e.preventDefault();
-    context.handleAddUser(formValues);
-    setFormValues(initialFormState);
+    if (formValues.consent) {
+      context.handleAddUser(formValues);
+      dispatch({ type: 'CLEAR_VALUES' });
+    } else {
+      dispatch({ type: 'THROW_ERROR', errorValue: 'fill all fields' });
+    }
   };
 
   return (
     <ViewWrapper as="form" onSubmit={handleSubmitUser}>
       <Title>{'Form'}</Title>
       <FormField
+        ref={ref}
         label="Name"
         id="name"
         name="name"
@@ -49,7 +96,16 @@ const AddUser = () => {
         value={formValues.average}
         onChange={handleInputChange}
       />
+      <FormField
+        label="Consent"
+        type="checkbox"
+        id="consent"
+        name="consent"
+        onChange={() => dispatch({ type: 'CONSENT_TOGGLE' })}
+        checked={formValues.checked}
+      />
       <Button type={'submit'}>Add </Button>
+      {formValues.error ? <p>{formValues.error}</p> : null}
     </ViewWrapper>
   );
 };
